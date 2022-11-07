@@ -28,6 +28,7 @@ class User {
       [username, hashPassword, first_name, last_name, phone]
     );
 
+    //TODO: add check to make sure we got rows[0] can also add try/catch
     return result.rows[0];
   }
 
@@ -42,9 +43,9 @@ class User {
       `, [username]
     );
 
-    const user = result.rows[0]
+    const user = result.rows[0];
 
-    if (!user) throw new NotFoundError(`No such user: ${username}`);
+    if (!user) throw new NotFoundError(`No such user: ${username}`); //TODO: return false
 
     return (await bcrypt.compare(password, user.password)) === true;
   }
@@ -52,11 +53,13 @@ class User {
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
-    db.query(
+    db.query( //TODO: await this
       `UPDATE users
             SET last_login_at = current_timestamp
             WHERE username = $1`, [username]
     );
+
+    //TODO: add a returning clause to check if you got anything back
   }
 
   /** All: basic info on all users:
@@ -67,7 +70,7 @@ class User {
       `SELECT username,
                   first_name,
                   last_name
-              FROM users`
+              FROM users` //TODO: ORDER BY
     );
 
     return results.rows;
@@ -123,13 +126,13 @@ class User {
         FROM users AS f
           JOIN messages AS m ON f.username = m.from_username
           JOIN users AS t ON m.to_username = t.username
-        WHERE f.username = $1`,
-        [username]
+        WHERE f.username = $1`, //NOTE we dont' need all 3 tables (can trim down to 2 message<->user)
+      [username]
     );
 
     let messagesFrom = results.rows;
 
-    if (!messagesFrom[0]) throw new NotFoundError(`No such user: ${username}`)
+    if (!messagesFrom[0]) throw new NotFoundError(`No such user: ${username}`); //TODO: don't need this user can have 0 messages
 
     return messagesFrom.map(message => {
       return {
@@ -170,12 +173,12 @@ class User {
           JOIN messages AS m ON t.username = m.to_username
           JOIN users AS f ON m.from_username = f.username
         WHERE t.username = $1`,
-        [username]
+      [username]
     );
 
     let messagesTo = results.rows;
 
-    if (!messagesTo[0]) throw new NotFoundError(`No such user: ${username}`)
+    if (!messagesTo[0]) throw new NotFoundError(`No such user: ${username}`);
 
     return messagesTo.map(message => {
       return {
