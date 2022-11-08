@@ -2,14 +2,25 @@
 
 const Router = require("express").Router;
 const router = new Router();
-
+const jwt = require("jsonwebtoken");
+const db = require("../db");
+const bcrypt = require("bcrypt");
+const User = require("../models/user");
+const { SECRET_KEY } = require("../config");
+const { BadRequestError, UnauthorizedError } = require("../expressError");
+const app = require("../app");
 
 /** GET / - get list of users.
  *
  * => {users: [{username, first_name, last_name}, ...]}
  *
  **/
-
+router.get('/', async function(req, res) {
+  //TODO: USE THEIR ENSURELOGGEDIN FUNCTION BECAUSE YOU ARE DUMB (SPENCER IS)
+  const user = res.locals.user;
+  if(!user) throw new UnauthorizedError();
+  return res.json(await User.all());
+});
 
 /** GET /:username - get detail of users.
  *
