@@ -6,25 +6,29 @@ const { ensureCorrectUser, ensureLoggedIn } = require("../middleware/auth")
 const User = require("../models/user");
 
 /** GET / - get list of users.
- *
+ * Goes through autheticateJWT, ensureLoggedIn middleware
  * => {users: [{username, first_name, last_name}, ...]}
  *
  **/
 router.get('/', ensureLoggedIn, async function(req, res) {
-  return res.json({users: await User.all()});
+  const users = await User.all();
+  return res.json({users});
 });
 
 /** GET /:username - get detail of users.
+ * Goes through autheticateJWT, ensureCorrectUser middleware
  *
  * => {user: {username, first_name, last_name, phone, join_at, last_login_at}}
  *
  **/
 router.get('/:username', ensureCorrectUser, async function(req, res) {
-  return res.json({user: await User.get(req.params.username)});
+  const user = await User.get(req.params.username);
+  return res.json({user});
 });
 
 
 /** GET /:username/to - get messages to user
+ * Goes through autheticateJWT, ensureCorrectUser middleware
  *
  * => {messages: [{id,
  *                 body,
@@ -34,11 +38,13 @@ router.get('/:username', ensureCorrectUser, async function(req, res) {
  *
  **/
 router.get('/:username/to', ensureCorrectUser, async function(req, res) {
-  return res.json({messages: await User.messagesTo(req.params.username)});
-})
+  const messages = await User.messagesTo(req.params.username);
+  return res.json({messages});
+});
 
 
 /** GET /:username/from - get messages from user
+ * Goes through autheticateJWT, ensureCorrectUser middleware
  *
  * => {messages: [{id,
  *                 body,
@@ -48,7 +54,8 @@ router.get('/:username/to', ensureCorrectUser, async function(req, res) {
  *
  **/
 router.get('/:username/from', ensureCorrectUser, async function(req, res) {
-  return res.json({messages: await User.messagesFrom(req.params.username)});
-})
+  const messages = await User.messagesFrom(req.params.username);
+  return res.json({messages});
+});
 
 module.exports = router;

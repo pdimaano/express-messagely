@@ -8,21 +8,19 @@ const bcrypt = require("bcrypt");
 const User = require("../models/user");
 const { SECRET_KEY } = require("../config");
 const { BadRequestError, UnauthorizedError } = require("../expressError");
+const User = require("../models/user");
 
 /** POST /login: {username, password} => {token} */
 
 router.post("/login", async function (req, res, next) {
   if (req.body === undefined) throw new BadRequestError();
   const { username, password } = req.body;
-  const result = await db.query(
-    "SELECT password FROM users WHERE username = $1",
-    [username]
-  );
-  const hashPassword = result.rows[0];
+  const isValidLogin = User.authenticate(username, password);
 
-  if (hashPassword) {
+  if (isValidLogin) {
     if ((await bcrypt.compare(password, hashPassword.password)) === true) {
       const token = jwt.sign({ username }, SECRET_KEY);
+      User.updateLoginTimestamp(username);
       return res.json({ token });
     }
   }
