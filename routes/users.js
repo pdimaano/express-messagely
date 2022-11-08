@@ -4,6 +4,7 @@ const Router = require("express").Router;
 const router = new Router();
 const jwt = require("jsonwebtoken");
 const db = require("../db");
+const { ensureCorrectUser, ensureLoggedIn } = require("../middleware/auth")
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
 const { SECRET_KEY } = require("../config");
@@ -15,11 +16,8 @@ const app = require("../app");
  * => {users: [{username, first_name, last_name}, ...]}
  *
  **/
-router.get('/', async function(req, res) {
-  //TODO: USE THEIR ENSURELOGGEDIN FUNCTION BECAUSE YOU ARE DUMB (SPENCER IS)
-  const user = res.locals.user;
-  if(!user) throw new UnauthorizedError();
-  return res.json(await User.all());
+router.get('/', ensureLoggedIn, async function(req, res) {
+  return res.json({users: await User.all()});
 });
 
 /** GET /:username - get detail of users.
@@ -27,6 +25,9 @@ router.get('/', async function(req, res) {
  * => {user: {username, first_name, last_name, phone, join_at, last_login_at}}
  *
  **/
+router.get('/:username', ensureCorrectUser, async function(req, res) {
+  return res.json({user: await User.get(req.params.username)});
+});
 
 
 /** GET /:username/to - get messages to user
@@ -38,6 +39,9 @@ router.get('/', async function(req, res) {
  *                 from_user: {username, first_name, last_name, phone}}, ...]}
  *
  **/
+router.get('/:username/to', ensureCorrectUser, async function(req, res) {
+  return res.json({messages: await User.messagesTo(req.params.username)});
+})
 
 
 /** GET /:username/from - get messages from user
@@ -49,5 +53,8 @@ router.get('/', async function(req, res) {
  *                 to_user: {username, first_name, last_name, phone}}, ...]}
  *
  **/
+router.get('/:username/from', ensureCorrectUser, async function(req, res) {
+  return res.json({messages: await User.messagesFrom(req.params.username)});
+})
 
 module.exports = router;
