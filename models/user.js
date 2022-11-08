@@ -1,6 +1,6 @@
 "use strict";
 
-const { NotFoundError } = require("../expressError");
+const { NotFoundError, BadRequestError } = require("../expressError");
 const db = require("../db");
 const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require("../config");
@@ -28,7 +28,7 @@ class User {
       [username, hashPassword, first_name, last_name, phone]
     );
 
-    //TODO: add check to make sure we got rows[0] can also add try/catch
+    if (!result.rows[0]) throw new BadRequestError();
     return result.rows[0];
   }
 
@@ -45,7 +45,7 @@ class User {
 
     const user = result.rows[0];
 
-    if (!user) throw new NotFoundError(`No such user: ${username}`); //TODO: return false
+    if (!user) return false;
 
     return (await bcrypt.compare(password, user.password)) === true;
   }
@@ -53,13 +53,14 @@ class User {
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
-    db.query( //TODO: await this
+    const result = await db.query(
       `UPDATE users
             SET last_login_at = current_timestamp
-            WHERE username = $1`, [username]
+            WHERE username = $1
+            RETURNING username, last_login_at`, [username]
     );
 
-    //TODO: add a returning clause to check if you got anything back
+    if (!result.rows[0]) throw new NotFoundError('Invalid Credentials');
   }
 
   /** All: basic info on all users:
@@ -70,7 +71,9 @@ class User {
       `SELECT username,
                   first_name,
                   last_name
-              FROM users` //TODO: ORDER BY
+        FROM users
+        ORDER BY last_name
+      `
     );
 
     return results.rows;
@@ -123,16 +126,14 @@ class User {
               t.first_name,
               t.last_name,
               t.phone
-        FROM users AS f
-          JOIN messages AS m ON f.username = m.from_username
+        FROM messages AS m
           JOIN users AS t ON m.to_username = t.username
-        WHERE f.username = $1`, //NOTE we dont' need all 3 tables (can trim down to 2 message<->user)
+        WHERE m.from_username = $1
+        ORDER BY m.sent_at`,
       [username]
     );
 
     let messagesFrom = results.rows;
-
-    if (!messagesFrom[0]) throw new NotFoundError(`No such user: ${username}`); //TODO: don't need this user can have 0 messages
 
     return messagesFrom.map(message => {
       return {
@@ -169,16 +170,14 @@ class User {
               f.first_name,
               f.last_name,
               f.phone
-        FROM users AS t
-          JOIN messages AS m ON t.username = m.to_username
+        FROM messages AS m
           JOIN users AS f ON m.from_username = f.username
-        WHERE t.username = $1`,
-      [username]
+        WHERE m.to_username = $1
+        ORDER BY m.sent_at
+      `, [username]
     );
 
     let messagesTo = results.rows;
-
-    if (!messagesTo[0]) throw new NotFoundError(`No such user: ${username}`);
 
     return messagesTo.map(message => {
       return {
